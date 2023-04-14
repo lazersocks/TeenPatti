@@ -6,6 +6,7 @@ import { Socket } from "socket.io-client";
 import { DefaultEventsMap } from "socket.io/dist/typed-events";
 import { useDispatch, useSelector } from "react-redux";
 import { setHandCards } from "./features/handCardsSlice";
+import { setMyTableCards } from "./features/myTableCardsSlice";
 
 interface TableProps {
   socket: Socket<DefaultEventsMap, DefaultEventsMap>;
@@ -71,6 +72,15 @@ function GameTable({ socket, myName }: TableProps) {
       }
     }
   }
+  function myTableCards(players: any[], myName: string) {
+    for (let i = 0; i < players.length; i++) {
+      const player = players[i];
+      if (player.name === myName) {
+        console.log("in my table cards");
+        return player.cards;
+      }
+    }
+  }
   const dispatch = useDispatch();
   const mainCards = useSelector((state: any) => state.mainCards.mainCards);
 
@@ -90,8 +100,14 @@ function GameTable({ socket, myName }: TableProps) {
       setPlayers(res.data);
       console.log("setPlayers", res.data);
       let cards = myHandCards(res.data, myName);
-      console.log("cards", cards);
+      let table = myTableCards(res.data, myName); //these are private cards shown in card container
+      console.log("table cards from server", table);
+      //console.log("cards", cards);
+      if (cards.length === 0 && table.length === 0) {
+        socket.emit("win", { name: myName });
+      }
       dispatch(setHandCards(cards));
+      dispatch(setMyTableCards(table));
 
       /// add win condition to check if the player'hand cards are empty and table cards are empty
     });

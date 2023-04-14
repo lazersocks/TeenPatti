@@ -53,7 +53,7 @@ function increaseTurn(validTurn:boolean, socket1:any){
         tableCards = []
         io.emit("mainCards",{data: "reset"}) //table deck reset
         io.emit('gameStarted', {data:Array. from (players.values())}); //update player hand cards
-        io.emit("message",`${Array. from (players.values())[(((turn-1)+4))%4].name} your turn is skipped since you had no valid card`)
+        io.emit("message",`${Array. from (players.values())[(((turn-1)+players.size))%players.size].name} your turn is skipped since you had no valid card`)
 
 
        // turn = (turn+1)%players.size
@@ -75,6 +75,7 @@ server.listen(3001, ()=>{
 })
 io.on("connection",(socket:any)=>{
     console.log("user connected with a socket id", socket.id)
+
     socket.on("join",(data:any)=>{
         //remove card from deck add it to main table deck 
            
@@ -85,6 +86,7 @@ io.on("connection",(socket:any)=>{
 
         let playerToAdd:Player = { name: data.message, tag: `player-${tag}`, cards: [], handCards: [] };
         dealCards(playerToAdd,deck)
+        //playerToAdd.handCards = [] //bun
         players.set(socket.id, playerToAdd);
         socket.emit("setMyTableCards", {data: playerToAdd.cards});
 
@@ -94,7 +96,7 @@ io.on("connection",(socket:any)=>{
             // io.emit('playerJoined', {data: connectedUsers});
             // }
             io.emit('playerJoined', {data: connectedUsers});
-            if (connectedUsers == 2) {
+            if (connectedUsers == 4) {
                 tableCards.push(deck.pop() as Card)
                 io.emit('gameStarted', {data:Array. from (players.values())});
                 io.emit("message",`${Array. from (players.values())[turn].name} it's your turn`)
@@ -111,6 +113,10 @@ io.on("connection",(socket:any)=>{
         
     
     })
+    socket.on("win",(player:any)=>{
+
+        io.emit("setWinner",`${player.name} wins`)
+    })
 
     socket.on("playCard",(card:any)=>{
        // console.log("rank", card.rank,JSON.stringify(tableCards[tableCards.length-1].rank))
@@ -120,10 +126,14 @@ io.on("connection",(socket:any)=>{
            // console.log (compareCardRanks(card.rank,tableCards[tableCards.length-1].rank))
             if (tableCards.length === 0 || (compareCardRanks(card.rank,tableCards[tableCards.length-1].rank,tableCards))){  // allow turn when table = 0 or when card is higher than last card
                 let cardIndex = player.handCards.findIndex((c:Card)=> c.rank === card.rank && c.suit === card.suit)
-                if (cardIndex !== -1) {
-                        let cardToPlay = player.handCards.splice(cardIndex,1)[0]
+                let cardToPlay = player.handCards.splice(cardIndex,1)[0]
+                if (cardIndex === -1) {
+                    cardIndex = player.cards.findIndex((c:Card)=> c.rank === card.rank && c.suit === card.suit)
+                     cardToPlay = player.cards.splice(cardIndex,1)[0]
+                }
+                        
                         cardToPlay.back = false
-                        if (deck.length > 0) {
+                        if (deck.length > 0) {  //bun
                             player.handCards.push(deck.pop() as Card)
                         }
                         if (cardToPlay.rank === "2") {
@@ -154,7 +164,7 @@ io.on("connection",(socket:any)=>{
                         io.emit("setTurn",`${Array. from (players.values())[turn].name}`)
                         io.emit("message",`${Array. from (players.values())[turn].name} it's your turn`)
                         return
-                    }
+                    
                     //bs idher check kero if card is not in 
                     // if table card is valid add to table else add tht table card to player hand along with rest of table cards
                     // check if card is in face up  table cards
@@ -162,7 +172,42 @@ io.on("connection",(socket:any)=>{
                 //io.emit("setMyTableCards", {data: player.cards});
                // io.emit("setMyHandCards", {data: player.handCards});
             } 
-            if (card.type === "face-up"){}
+            if (card.type === "face-up"){  //here bec face up card chosen is invalid
+                let cardIndex = player.cards.findIndex((c:Card)=> c.rank === card.rank && c.suit === card.suit)
+                let cardToPlay = player.cards.slice(cardIndex,cardIndex+1)[0] //not removing from face up cards
+                //cardToPlay.back = false
+                let all_cards = tableCards
+                player.handCards.push(...all_cards)
+                tableCards = []
+                io.emit("mainCards",{data: "reset"}) //table deck reset
+                io.emit('gameStarted', {data:Array. from (players.values())}); //update player hand cards
+                io.emit("message",`${Array. from (players.values())[((turn))%players.size].name} your turn is skipped since you had no valid face up cards`)
+                turn = (turn+1)%players.size
+                io.emit("setTurn",`${Array. from (players.values())[turn].name}`) //set next turn
+                io.emit("message",`${Array. from (players.values())[turn].name} it's your turn`)
+                return
+
+            }
+
+            if (card.type === "face-down"){
+                //console.log("face down")
+                let cardIndex = player.cards.findIndex((c:Card)=> c.rank === card.rank && c.suit === card.suit)
+                let cardToPlay = player.cards.splice(cardIndex,1)[0]
+                //console.log(player.cards)
+                //cardToPlay.back = false
+                let all_cards = tableCards
+                player.handCards.push(...all_cards)
+                player.handCards.push(cardToPlay)
+                tableCards = []
+                io.emit("mainCards",{data: "reset"}) //table deck reset
+                io.emit('gameStarted', {data:Array. from (players.values())}); //update player hand cards
+                io.emit("message",`${player.name} played ${cardToPlay.rank} of ${cardToPlay.suit}`)
+                io.emit("message",`${Array. from (players.values())[((turn))%players.size].name} your turn is skipped since you did not choose a valid face down card`)
+                turn = (turn+1)%players.size
+                io.emit("setTurn",`${Array. from (players.values())[turn].name}`) //set next turn
+                io.emit("message",`${Array. from (players.values())[turn].name} it's your turn`)
+                return
+            }
             
             io.emit("message",`${player.name} you can't play this card`)
 

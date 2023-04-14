@@ -8,7 +8,7 @@ import Header from "../Header/Header";
 import MessageBox from "../MessageBox";
 import MyCardsContainer from "../MyCardsContainer";
 import { setPlayers } from "../features/connectedSlice";
-import { setMyTableCards } from "../features/myTableCardsSlice";
+//import { setMyTableCards } from "../features/myTableCardsSlice";
 import { setTurn } from "../features/currenTurnSlice";
 import { setMainCards } from "../features/mainCardsSlice";
 
@@ -25,6 +25,8 @@ function HomePage({ socket }: HomePageProps, msg: string) {
   const [myName, setName] = useState<string>("");
   const [Loading, setLoading] = useState(false);
   const [winner, setWinner] = useState<string>("");
+  const handCards = useSelector((state: any) => state.handCards.handCards);
+  // const players = useSelector((state: any) => state.connected.players);
 
   socket.emit("connection", { data: myName });
 
@@ -55,10 +57,10 @@ function HomePage({ socket }: HomePageProps, msg: string) {
       console.log("count _rec", event.data);
     });
 
-    socket.on("setMyTableCards", (req) => {
-      // hand cards which are on table [bottom cards]
-      dispatch(setMyTableCards(req.data));
-    });
+    // socket.on("setMyTableCards", (req) => {
+    //   // hand cards which are on table [bottom cards]
+    //   dispatch(setMyTableCards(req.data));
+    // });
 
     socket.on("mainCards", (data) => {
       if (data.data === "reset") {
@@ -72,7 +74,8 @@ function HomePage({ socket }: HomePageProps, msg: string) {
     socket.on("setTurn", (name) => {
       console.log("set turn", name);
       dispatch(setTurn(name));
-      if (name === myName) {
+      console.log("hand cards", handCards);
+      if (name === myName && handCards.length !== 0) {
         socket.emit("verifyTurn", { id: socket.id });
       }
     });
@@ -82,20 +85,34 @@ function HomePage({ socket }: HomePageProps, msg: string) {
     });
 
     return () => {
-      socket.off("setMyTableCards");
+      // socket.off("setMyTableCards");
       socket.off("mainCards");
       socket.off("setTurn");
       socket.off("playerJoined");
       socket.off("setWinner");
     };
-  }, [socket, dispatch, myName]);
+  }, [socket, dispatch, myName, handCards]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
   };
-
-  return winner !== "" ? (
-    redux_count === 2 ? (
+  if (winner !== "") {
+    return (
+      <div
+        className="winner"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          backgroundColor: "#fff",
+        }}
+      >
+        <h1 style={{ fontSize: "3rem", color: "#000" }}>Winner is {winner}</h1>
+      </div>
+    );
+  } else {
+    return redux_count === 4 && myName !== "" ? (
       <div className="main-container playingCards">
         <div className="game-container">
           <Header />
@@ -115,55 +132,63 @@ function HomePage({ socket }: HomePageProps, msg: string) {
         </div>
       </div>
     ) : Loading ? (
-      <div>loading</div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100vh",
+          backgroundColor: "#fff",
+        }}
+      >
+        <h1 style={{ fontSize: "3rem", color: "#000" }}>Loading...</h1>
+      </div>
     ) : (
       <>
-        <div className="sampleHomePage">
-          <h1 className="sampleTitle">My Game</h1>
-          <div className="sampleMessage">
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            marginTop: "10%",
+          }}
+          className="sampleHomePage"
+        >
+          <h1
+            style={{ fontSize: "3rem", marginBottom: "1rem" }}
+            className="sampleTitle"
+          >
+            My Game
+          </h1>
+          <div
+            style={{ display: "flex", alignItems: "center" }}
+            className="sampleMessage"
+          >
             <input
               placeholder="Enter your name"
               onChange={handleChange}
+              style={{
+                padding: "0.5rem",
+                fontSize: "1.5rem",
+                marginRight: "1rem",
+              }}
             ></input>
-            <button onClick={() => handleClick(socket, myName)}>Join</button>
+            <button
+              style={{
+                padding: "0.5rem 1rem",
+                fontSize: "1.5rem",
+                backgroundColor: "#008CBA",
+                color: "#fff",
+                borderRadius: "5px",
+              }}
+              onClick={() => handleClick(socket, myName)}
+            >
+              Join
+            </button>
           </div>
         </div>
       </>
-    )
-  ) : (
-    <div className="winner"></div>
-  );
-  {
-    /* // <div className="main-container playingCards">
-  //   <div className="game-container">
-  //     <Header />
-  //     <div className="game-table-container">
-  //       <GameTable />
-  //     </div>
-  //   </div>
-  //   <div className="messages-and-cards-container">
-  //     <div className="right-side-container messages-container">
-  //       <h1>Messages</h1>
-  //       <MessageBox socket={socket} />
-  //     </div>
-  //     <div className="right-side-container my-cards-container">
-  //       <h1>My Cards</h1>
-  //       <MyCardsContainer />
-  //     </div>
-  //   </div>
-  // </div>
-
-  // <>
-  //   <div className="sampleHomePage">
-  //     <h1 className="sampleTitle">My Game</h1>
-  //     <div className="sampleMessage">
-  //       <input placeholder="message" onChange={handleChange}></input>
-  //       <button onClick={() => handleClick(socket, msg2)}>
-  //         Click me to send a message to server...
-  //       </button>
-  //     </div>
-  //   </div>
-  // </> */
+    );
   }
 }
 export default HomePage;

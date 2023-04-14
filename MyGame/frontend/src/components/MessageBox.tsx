@@ -7,7 +7,9 @@ interface MessageBoxProp {
   //you can always add more functions/objects that you would like as props for this component
 }
 export default function MessageBox({ socket }: MessageBoxProp) {
-  const [messages, setMessages] = useState(["latest message comes here"]);
+  const [messages, setMessages] = useState<string[]>([
+    "Latest message comes here",
+  ]);
 
   useEffect(() => {
     socket.on("message", (msg) => {

@@ -87,7 +87,7 @@ function compareCardRanks(rank1: string, rank2: string,tableCards:Card[]): boole
         }
     } 
 
-    if (rank2Index === 6){ // 7 card condition
+    if (rank2Index === 6 && rank1Index !== 10){ // 7 card condition
        return rank1Index <= rank2Index
     }
 
